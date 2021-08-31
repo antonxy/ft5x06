@@ -46,8 +46,16 @@ pub struct Touch {
     pub y: B12,
 }
 
-pub struct FT5x06<I2C>
-{
+#[derive(Debug)]
+pub enum FT5x06Error<I2cError> {
+    InvalidData,
+    I2cError(I2cError),
+}
+
+use FT5x06Error::I2cError;
+use FT5x06Error::InvalidData;
+
+pub struct FT5x06<I2C> {
     i2c: I2C
 }
 
@@ -55,37 +63,38 @@ impl<E, I2C> FT5x06<I2C>
 where
     I2C: WriteRead<SevenBitAddress, Error = E>
 {
+
     pub fn new(i2c: I2C) -> Self {
         Self {
             i2c
         }
     }
 
-    pub fn read_num_touches(&mut self) -> Result<u8, E> {
+    pub fn read_num_touches(&mut self) -> Result<u8, FT5x06Error<E>> {
         let mut num_touches_bytes = [0];
-        self.i2c.write_read(ADDR, &[NUM_TOUCHES_REGISTER], &mut num_touches_bytes)?;
+        self.i2c.write_read(ADDR, &[NUM_TOUCHES_REGISTER], &mut num_touches_bytes).map_err(|e| I2cError(e))?;
 
         // Only the lowest 4 bits are valid
         Ok(num_touches_bytes[0] & 0b00001111)
     }
 
-    pub fn read_touch(&mut self, touch_id: u8) -> Result<Touch, E> {
+    pub fn read_touch(&mut self, touch_id: u8) -> Result<Touch, FT5x06Error<E>> {
         assert!(touch_id < 10);
 
         let mut touch_bytes = [0;4];
-        self.i2c.write_read(ADDR, &[TOUCHES_REGISTER_START + touch_id * TOUCHES_REGISTER_STEP], &mut touch_bytes)?;
+        self.i2c.write_read(ADDR, &[TOUCHES_REGISTER_START + touch_id * TOUCHES_REGISTER_STEP], &mut touch_bytes).map_err(|e| I2cError(e))?;
 
         Ok(Touch::from_bytes(touch_bytes))
     }
 
-    pub fn read_gesture(&mut self) -> Result<Option<Gesture>, E> {
+    pub fn read_gesture(&mut self) -> Result<Option<Gesture>, FT5x06Error<E>> {
         let mut gesture_bytes = [0];
-        self.i2c.write_read(ADDR, &[GESTURE_REGISTER], &mut gesture_bytes)?;
+        self.i2c.write_read(ADDR, &[GESTURE_REGISTER], &mut gesture_bytes).map_err(|e| I2cError(e))?;
 
         if gesture_bytes[0] == 0x00 {
             Ok(None)
         } else {
-            Ok(Some(Gesture::from_bytes(gesture_bytes[0]).unwrap()))
+            Gesture::from_bytes(gesture_bytes[0]).map(|r| Some(r)).map_err(|_| InvalidData)
         }
     }
 
