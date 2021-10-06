@@ -5,6 +5,7 @@
 
 extern crate embedded_hal as hal;
 
+use defmt::Format;
 use hal::blocking::i2c::{WriteRead, SevenBitAddress};
 
 use modular_bitfield_msb::prelude::*;
@@ -16,7 +17,7 @@ const NUM_TOUCHES_REGISTER: u8 = 0x02;
 const TOUCHES_REGISTER_START: u8 = 0x03;
 const TOUCHES_REGISTER_STEP: u8 = 0x06;
 
-#[derive(BitfieldSpecifier, Debug)]
+#[derive(BitfieldSpecifier, Debug, Format)]
 #[bits = 8]
 pub enum Gesture {
     MoveUp = 0x10,
@@ -27,7 +28,7 @@ pub enum Gesture {
     ZoomOut = 0x49,
 }
 
-#[derive(BitfieldSpecifier, Debug)]
+#[derive(BitfieldSpecifier, Debug, Format)]
 #[bits = 2]
 pub enum Event {
     Down = 0,
@@ -36,7 +37,7 @@ pub enum Event {
 }
 
 #[bitfield(bits = 32)]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Format)]
 pub struct Touch {
     pub event: Event,
     #[skip] __: B2,
@@ -45,7 +46,7 @@ pub struct Touch {
     pub y: B12,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Format)]
 pub enum FT5x06Error<I2cError> {
     InvalidData,
     I2cError(I2cError),
