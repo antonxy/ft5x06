@@ -29,7 +29,6 @@ pub enum Gesture {
 
 #[derive(BitfieldSpecifier, Debug)]
 #[bits = 2]
-/// Range of output in mA
 pub enum Event {
     Down = 0,
     Up = 1,
